@@ -1,10 +1,10 @@
-pub struct ColorRYB {
+pub struct ColorRGB {
     pub r: u8,
     pub y: u8,
     pub b: u8,
 }
-impl ColorRYB {
-    pub fn new(r: u8, y: u8, b: u8) -> Self {
-    Self { r, y, b }
+impl ColorRGB {
+    pub fn new(r: u8, g: u8, b: u8) -> Self {
+    Self { r, g, b }
 }
 }
