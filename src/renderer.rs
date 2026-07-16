@@ -29,9 +29,12 @@ impl Renderer{
     let level = format!("Level: {}", game.level);
     draw_text(&level,20.0,60.0,30.0,GREEN,);
     let similarity = format!("Similarity: {:.1}%", game.similarity());
-    draw_text(&similarity,20.0, 300.0,30.0, SKYBLUE,);
-    draw_text("R/Y/B : Mix Colors",20.0,520.0,24.0,LIGHTGRAY,);
-    draw_text("SPACE : Submit",20.0,550.0,24.0,LIGHTGRAY,);
+    draw_text(&similarity,200.0, 300.0,30.0, SKYBLUE,);
+    draw_text("UP/DOWN : Red", 20.0, 500.0, 24.0, RED);
+    draw_text("LEFT/RIGHT : Yellow", 20.0, 530.0, 24.0, YELLOW);
+    draw_text("Q/A : Blue", 20.0, 560.0, 24.0, BLUE);
+    draw_text("SPACE : Submit", 20.0, 590.0, 24.0, WHITE);
+    draw_text(&game.message, 180.0, 330.0,35.0,ORANGE,);
 }
 
 pub fn render(&self, game: &GameState) {

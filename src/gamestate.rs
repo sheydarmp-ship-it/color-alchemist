@@ -7,11 +7,13 @@ pub struct GameState {
     pub level: u32,
     pub time_left: f32,
     pub game_over: bool,
+    pub message: String,
 }
 
 impl GameState {
     pub fn new(player_name: &str) -> Self {
         Self {
+            message: "Match the color!".to_string(),
             target: ColorRGB::random(),
             player: Player::new(player_name),
             level: 1,
@@ -34,4 +36,21 @@ impl GameState {
     pub fn end_game(&mut self) {
         self.game_over = true;
     }
+    pub fn submit_guess(&mut self) {
+
+    let similarity = self.similarity();
+
+    let points = similarity.round() as u32;
+
+    self.player.add_score(points);
+
+     if similarity >= 90.0 {
+         self.message = "Level Complete!".to_string();
+        self.next_level();
+    }
+    else {
+        self.message = "Try Again!".to_string();
+    }
+
+}
 }
