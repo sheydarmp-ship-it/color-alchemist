@@ -6,7 +6,7 @@ impl Renderer{
     {
         Self
     }
-    
+
      fn draw_background(&self){
         clear_background(DARKGRAY);
     }
@@ -29,7 +29,7 @@ impl Renderer{
     let level = format!("Level: {}", game.level);
     draw_text(&level,20.0,60.0,30.0,GREEN,);
     let similarity = format!("Similarity: {:.1}%", game.similarity());
-    draw_text(&similarity,20.0, 95.0,30.0, SKYBLUE,);
+    draw_text(&similarity,20.0, 300.0,30.0, SKYBLUE,);
     draw_text("R/Y/B : Mix Colors",20.0,520.0,24.0,LIGHTGRAY,);
     draw_text("SPACE : Submit",20.0,550.0,24.0,LIGHTGRAY,);
 }

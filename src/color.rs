@@ -1,4 +1,4 @@
-use rand::Rng;
+use ::rand::Rng;
 use macroquad::prelude::*;
 pub struct ColorRGB {
     pub r: u8,
@@ -10,12 +10,12 @@ impl ColorRGB {
     Self { r, y, b }
 }
 pub fn random() -> Self {
-    let mut rng = rand::thread_rng();
+    let mut rng = ::rand::rng();
 
     Self {
-        r: rng.gen_range(0..=255),
-        y: rng.gen_range(0..=255),
-        b: rng.gen_range(0..=255),
+        r: rng.random_range(0..=255),
+        y: rng.random_range(0..=255),
+        b: rng.random_range(0..=255),
     }
 }
 pub fn distance(&self, other: &ColorRGB) -> f32 {
