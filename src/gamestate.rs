@@ -47,10 +47,12 @@ pub struct GameState {
     pub result: RoundResult,
 
     pub message: String,
+
+    pub high_score: u32,
 }
 
 impl GameState {
-    pub fn new(player_name: &str, difficulty: Difficulty) -> Self {
+    pub fn new(player_name: &str,difficulty: Difficulty,high_score: u32,) -> Self {
         Self {
             target: ColorRGB::random(),
             player: Player::new(player_name),
@@ -64,6 +66,8 @@ impl GameState {
             result: RoundResult::Playing,
 
             message: "Match the color!".to_string(),
+
+            high_score,
         }
     }
 
@@ -74,7 +78,9 @@ impl GameState {
     pub fn submit_guess(&mut self) {
         if self.similarity() >= 90.0 {
             self.player.add_score(self.difficulty.score());
-
+            if self.player.score > self.high_score {
+            self.high_score = self.player.score;
+            }
             self.result = RoundResult::Win;
 
             self.message = "Level Complete!".to_string();

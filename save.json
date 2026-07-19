@@ -1,0 +1,28 @@
+{
+  "players": [
+    {
+      "name": "sheui\r",
+      "easy": 1,
+      "medium": 2,
+      "hard": 0
+    },
+    {
+      "name": "sheyda\r",
+      "easy": 1,
+      "medium": 0,
+      "hard": 0
+    },
+    {
+      "name": "sdfght\r",
+      "easy": 0,
+      "medium": 2,
+      "hard": 0
+    },
+    {
+      "name": "shd\r",
+      "easy": 0,
+      "medium": 0,
+      "hard": 0
+    }
+  ]
+}

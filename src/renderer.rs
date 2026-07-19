@@ -27,6 +27,8 @@ impl Renderer{
     draw_text("Your Color",420.0, 90.0,30.0, WHITE,);
     let score = format!("Score: {}", game.player.score);
     draw_text(&score, 20.0, 30.0, 30.0,YELLOW,);
+    let best = format!("Best: {}", game.high_score);
+    draw_text(&best,20.0,120.0,30.0,ORANGE,);
     let level = format!("Level: {}", game.level);
     draw_text(&level,20.0,60.0,30.0,GREEN,);
     let similarity = format!("Similarity: {:.1}%", game.similarity());
@@ -37,7 +39,7 @@ impl Renderer{
     draw_text("SPACE : Submit", 20.0, 590.0, 24.0, WHITE);
     draw_text(&game.message, 270.0, 330.0,35.0,ORANGE,);
     let time = format!("Time: {:.0}", game.time_left);
-    draw_text(&time,20.0, 90.0,30.0,RED);
+    draw_text(&time, 20.0, 150.0, 30.0, RED);
 }
 
 fn draw_result_screen(&self, game: &GameState) {

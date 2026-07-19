@@ -1,6 +1,6 @@
 use crate::gamestate::Difficulty;
 use macroquad::prelude::*;
-
+use crate::save::SaveData;
 pub struct Menu {
     pub player_name: String,
     pub selected: usize,
@@ -16,6 +16,7 @@ pub enum MenuStep {
     Network,
     Difficulty,
     Ready,
+    Leaderboard,
 }
 
 pub enum GameMode {
@@ -43,6 +44,7 @@ pub fn update(&mut self) {
         MenuStep::Network => self.update_network(),
         MenuStep::Difficulty => self.update_difficulty(),
         MenuStep::Ready => self.update_ready(),
+        MenuStep::Leaderboard => {}
     }
 
     self.handle_escape();
@@ -76,24 +78,39 @@ fn update_name(&mut self) {
 
 fn update_mode(&mut self) {
     if is_key_pressed(KeyCode::Down) {
-        self.selected = 1;
+    if self.selected < 2 {
+        self.selected += 1;
     }
+}
 
     if is_key_pressed(KeyCode::Up) {
-        self.selected = 0;
+    if self.selected > 0 {
+        self.selected -= 1;
     }
+}
 
     if is_key_pressed(KeyCode::Enter) {
-        if self.selected == 0 {
+    match self.selected {
+        0 => {
             self.mode = GameMode::Single;
+            self.reset_selection();
             self.step = MenuStep::Difficulty;
-        } else {
+        }
+
+        1 => {
             self.mode = GameMode::Multiplayer;
+            self.reset_selection();
             self.step = MenuStep::Network;
         }
 
-        self.reset_selection();
+        2 => {
+            self.reset_selection();
+            self.step = MenuStep::Leaderboard;
+        }
+
+        _ => {}
     }
+}
 }
 
 fn update_network(&mut self) {
@@ -132,6 +149,8 @@ fn handle_escape(&mut self) {
     match self.step {
         MenuStep::Difficulty => self.step = MenuStep::Mode,
         MenuStep::Mode => self.step = MenuStep::Name,
+        MenuStep::Leaderboard => {self.step = MenuStep::Mode;}
+
         _ => {}
     }
 }
@@ -157,6 +176,7 @@ pub fn draw(&self) {
         MenuStep::Network => self.draw_network(),
         MenuStep::Difficulty => self.draw_difficulty(),
         MenuStep::Ready => self.draw_ready(),
+        MenuStep::Leaderboard => self.draw_leaderboard(),
     }
 }
 fn draw_name(&self) {
@@ -178,10 +198,13 @@ fn draw_mode(&self) {
 
     let multi =
         if self.selected == 1 { GREEN } else { WHITE };
+    let leader =
+         if self.selected == 2 { GREEN } else { WHITE };
+
 
     draw_text("Single Player",170.0,220.0,35.0,single);
     draw_text("Multiplayer",170.0,280.0,35.0,multi);
-
+    draw_text("Leaderboard",170.0,340.0,35.0,leader);
     draw_text("UP/DOWN : Move",120.0,380.0,28.0,LIGHTGRAY);
     draw_text("ENTER : Select",120.0,420.0,28.0,LIGHTGRAY);
 }
@@ -240,5 +263,31 @@ fn draw_ready(&self) {
         35.0,
         YELLOW,
     );
+}
+fn draw_leaderboard(&self) {
+    clear_background(BLACK);
+
+    draw_text("LEADERBOARD",170.0,70.0,45.0,YELLOW);
+
+    let mut save = SaveData::load();
+
+    save.players.sort_by(|a, b| {
+        let sa = a.easy + a.medium + a.hard;
+        let sb = b.easy + b.medium + b.hard;
+
+        sb.cmp(&sa)
+    });
+
+    for (i, player) in save.players.iter().enumerate() {
+
+        let total =
+            player.easy + player.medium + player.hard;
+
+        let line = format!( "{}. {}   {}",i + 1,player.name, total,);
+
+        draw_text(&line,120.0, 130.0 + i as f32 * 35.0,30.0,WHITE);
+    }
+
+    draw_text("ESC : Back", 120.0, 520.0,28.0,LIGHTGRAY);
 }
 }

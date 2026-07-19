@@ -3,32 +3,50 @@ mod gamestate;
 mod menu;
 mod player;
 mod renderer;
-
+mod save;
+mod leaderboard;
 use gamestate::{GameState, RoundResult};
 use macroquad::prelude::*;
 use menu::Menu;
 use renderer::Renderer;
-
+use save::SaveData;
+use leaderboard::Leaderboard;
 #[macroquad::main("Color Alchemist")]
 async fn main() {
     let mut menu = Menu::new();
     let mut game: Option<GameState> = None;
+    let mut save = SaveData::load();
     let renderer = Renderer::new();
-
+    let mut show_leaderboard = false;
     loop {
         let mut back_to_menu = false;
+        if is_key_pressed(KeyCode::L) {
+        show_leaderboard = !show_leaderboard;
+    }
 
+        if show_leaderboard {
+        Leaderboard::draw(&save.get_players());
+
+    if is_key_pressed(KeyCode::Escape) {
+        show_leaderboard = false;
+    }
+
+    next_frame().await;
+    continue;
+}
         if let Some(current_game) = game.as_mut() {
             update_game(
                 current_game,
                 &renderer,
                 &mut back_to_menu,
+                &mut save,
             );
         } else {
             update_menu(
                 &mut menu,
                 &mut game,
-            );
+            
+);
         }
 
         if back_to_menu {
@@ -44,12 +62,13 @@ fn update_game(
     game: &mut GameState,
     renderer: &Renderer,
     back_to_menu: &mut bool,
+    save: &mut SaveData,
 ) {
     handle_game_input(game);
 
     game.update(get_frame_time());
 
-    handle_result(game, back_to_menu);
+    handle_result(game, back_to_menu,save);
 
     renderer.render(game);
 }
@@ -61,9 +80,18 @@ fn update_menu(
     menu.draw();
 
     if menu.is_ready() {
+
+        let save = SaveData::load();
+
+        let high_score = save.get_highscore(
+            &menu.player_name,
+            menu.difficulty,
+        );
+
         *game = Some(GameState::new(
             &menu.player_name,
             menu.difficulty,
+            high_score,
         ));
     }
 }
@@ -116,6 +144,7 @@ fn update_blue(game: &mut GameState) {
 fn handle_result(
     game: &mut GameState,
     back_to_menu: &mut bool,
+    save: &mut SaveData,
 ) {
     if game.result == RoundResult::Playing {
         return;
@@ -123,10 +152,23 @@ fn handle_result(
 
     if is_key_pressed(KeyCode::Enter) {
         match game.result {
-            RoundResult::Win => game.next_level(),
+            RoundResult::Win => {
+                save.update_highscore(
+                    &game.player.name,
+                    game.difficulty,
+                    game.player.score,
+                );
 
-            RoundResult::Fail
-            | RoundResult::TimeUp => {
+                game.next_level();
+            }
+
+            RoundResult::Fail | RoundResult::TimeUp => {
+                save.update_highscore(
+                    &game.player.name,
+                    game.difficulty,
+                    game.player.score,
+                );
+
                 game.restart_round();
             }
 
@@ -135,6 +177,12 @@ fn handle_result(
     }
 
     if is_key_pressed(KeyCode::Escape) {
+        save.update_highscore(
+            &game.player.name,
+            game.difficulty,
+            game.player.score,
+        );
+
         *back_to_menu = true;
     }
 }
