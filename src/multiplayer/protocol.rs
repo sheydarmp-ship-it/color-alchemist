@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub enum Packet {
     Join {
         name: String,
+        difficulty: String,
     },
 
     Ready,
