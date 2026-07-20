@@ -1,12 +1,21 @@
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
+use crate::multiplayer::lobby::Lobby;
 use crate::multiplayer::protocol::Packet;
 
 pub struct Server;
 
 impl Server {
     pub async fn run(addr: &str) {
+        let lobby =
+    Arc::new(
+        Mutex::new(
+            Lobby::new()
+        )
+    );
         let listener =
             TcpListener::bind(addr)
                 .await
@@ -19,14 +28,24 @@ impl Server {
                 listener.accept().await.unwrap();
 
             tokio::spawn(async move {
-                Self::handle_client(socket).await;
+               let lobby = lobby.clone();
+
+tokio::spawn(async move {
+
+    Self::handle_client(
+        socket,
+        lobby,
+    ).await;
+
+});
             });
         }
     }
 
     async fn handle_client(
-        mut socket: TcpStream,
-    ) {
+    mut socket: TcpStream,
+    lobby: Arc<Mutex<Lobby>>,
+) {
         let mut buffer = [0u8; 1024];
 
         let size =
