@@ -12,7 +12,6 @@ use menu::Menu;
 use renderer::Renderer;
 use save::SaveData;
 use leaderboard::Leaderboard;
-use multiplayer::MultiplayerState;
 #[macroquad::main("Color Alchemist")]
 async fn main() {
     let mut menu = Menu::new();

@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+use crate::gamestate::Difficulty;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Packet {
     Join {
         name: String,
-        difficulty: String,
+        difficulty: Difficulty,
     },
 
     Ready,
@@ -33,4 +35,6 @@ pub enum Packet {
     },
 
     TimeUp,
+
+    Waiting,
 }

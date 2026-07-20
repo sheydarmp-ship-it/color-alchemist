@@ -1,6 +1,6 @@
 use crate::color::ColorRGB;
 use crate::player::Player;
-
+use serde::{Serialize, Deserialize};
 #[derive(Clone, Copy, PartialEq)]
 pub enum RoundResult {
     Playing,
@@ -9,7 +9,7 @@ pub enum RoundResult {
     TimeUp,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone,Copy,Debug,PartialEq,Eq,Serialize, Deserialize,)]
 pub enum Difficulty {
     Easy,
     Medium,

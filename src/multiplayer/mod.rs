@@ -1,5 +1,6 @@
-pub mod packet;
 pub mod client;
-pub mod server;
-pub mod room;
+pub mod packet;
 pub mod protocol;
+pub mod server;
+pub mod lobby;
+pub mod room;
