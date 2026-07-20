@@ -24,22 +24,14 @@ impl Server {
         println!("Server started on {}", addr);
 
         loop {
-            let (socket, _) =
-                listener.accept().await.unwrap();
+    let (socket, _) = listener.accept().await.unwrap();
 
-            tokio::spawn(async move {
-               let lobby = lobby.clone();
+    let lobby_clone = lobby.clone();
 
-tokio::spawn(async move {
-
-    Self::handle_client(
-        socket,
-        lobby,
-    ).await;
-
-});
-            });
-        }
+    tokio::spawn(async move {
+        Self::handle_client(socket, lobby_clone).await;
+    });
+}
     }
 
     async fn handle_client(
