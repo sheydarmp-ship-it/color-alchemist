@@ -1,66 +1,51 @@
-use std::collections::HashMap;
+use crate::multiplayer::protocol::Packet;
 
-#[derive(Clone)]
-pub struct NetworkPlayer {
-    pub id: u32,
+pub struct Player {
     pub name: String,
 }
 
 pub struct Lobby {
-    players: HashMap<u32, NetworkPlayer>,
-    next_id: u32,
+    pub players: Vec<Player>,
 }
 
 impl Lobby {
     pub fn new() -> Self {
         Self {
-            players: HashMap::new(),
-            next_id: 1,
+            players: Vec::new(),
         }
     }
 
     pub fn add_player(
         &mut self,
         name: String,
-    ) -> u32 {
+    ) {
+        self.players.push(Player { name });
 
-        let id = self.next_id;
-
-        self.next_id += 1;
-
-        self.players.insert(
-            id,
-            NetworkPlayer {
-                id,
-                name,
-            },
+        println!(
+            "Players: {}",
+            self.players.len()
         );
-
-        id
     }
 
     pub fn remove_player(
         &mut self,
-        id: u32,
+        name: &str,
     ) {
+        self.players.retain(
+            |p| p.name != name
+        );
 
-        self.players.remove(&id);
-
+        println!(
+            "Players: {}",
+            self.players.len()
+        );
     }
 
-    pub fn player_count(
-        &self,
-    ) -> usize {
-
+    pub fn player_count(&self) -> usize {
         self.players.len()
-
     }
 
-    pub fn is_ready(
-        &self,
-    ) -> bool {
-
+    pub fn is_ready(&self) -> bool {
         self.players.len() >= 2
-
     }
 }

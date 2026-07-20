@@ -9,3 +9,14 @@ rand = "0.9"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
+[lib]
+name = "color_alchemist"
+path = "src/libs.rs"
+
+[[bin]]
+name = "color_alchemist"
+path = "src/main.rs"
+
+[[bin]]
+name = "client"
+path = "src/bin/client.rs"

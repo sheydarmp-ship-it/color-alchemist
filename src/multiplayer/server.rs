@@ -59,9 +59,16 @@ impl Server {
 
         match packet {
             Packet::Join { name } => {
-                println!("{name} joined");
-            }
+    let mut lobby = lobby.lock().await;
 
+    lobby.add_player(name.clone());
+
+    println!("{name} joined");
+
+    if lobby.is_ready() {
+        println!("Game can start!");
+    }
+}
             Packet::Guess { r, g, b } => {
                 println!(
                     "Guess: {} {} {}",
@@ -72,8 +79,10 @@ impl Server {
             }
 
             Packet::Leave => {
-                println!("Player left");
-            }
+    let mut lobby = lobby.lock().await;
+
+    lobby.remove_player("Unknown");
+}
         }
     }
 }
