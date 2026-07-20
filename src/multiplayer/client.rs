@@ -22,12 +22,14 @@ impl Client {
         &mut self,
         packet: Packet,
     ) {
-        let text =
-            serde_json::to_string(&packet).unwrap();
+        let json =
+    serde_json::to_string(&packet).unwrap();
 
-        self.stream
-            .write_all(text.as_bytes())
-            .await
-            .unwrap();
+    let message = format!("{json}\n");
+
+    self.stream
+    .write_all(message.as_bytes())
+    .await
+    .unwrap();
     }
 }

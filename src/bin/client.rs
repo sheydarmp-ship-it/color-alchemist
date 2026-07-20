@@ -17,12 +17,12 @@ async fn main() {
         }
 
     ).await;
-let mut client =
-    Client::connect("127.0.0.1:7878").await;
 
 client.send(
-    Packet::Join {
-        name: "Sara".to_string(),
+    Packet::Guess {
+        r: 120,
+        g: 80,
+        b: 220,
     }
 ).await;
 }

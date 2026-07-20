@@ -1,4 +1,4 @@
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -38,51 +38,51 @@ impl Server {
     mut socket: TcpStream,
     lobby: Arc<Mutex<Lobby>>,
 ) {
-        let mut buffer = [0u8; 1024];
+        let reader = BufReader::new(socket);
 
-        let size =
-            socket.read(&mut buffer)
-                .await
-                .unwrap();
+let mut lines = reader.lines();
 
-        if size == 0 {
-            return;
-        }
+while let Some(line) = lines.next_line().await.unwrap() {
 
-        let text =
-            String::from_utf8_lossy(&buffer[..size]);
+    println!("Received: {}", line);
 
-        println!("Received: {}", text);
+    let packet: Packet =
+        serde_json::from_str(&line).unwrap();
 
-        let packet: Packet =
-            serde_json::from_str(&text).unwrap();
+    match packet {
 
-        match packet {
-            Packet::Join { name } => {
-    let mut lobby = lobby.lock().await;
+    Packet::Join { name } => {
 
-    lobby.add_player(name.clone());
+        let mut lobby =
+            lobby.lock().await;
 
-    println!("{name} joined");
+        lobby.add_player(name.clone());
 
-    if lobby.is_ready() {
-        println!("Game can start!");
-    }
-}
-            Packet::Guess { r, g, b } => {
-                println!(
-                    "Guess: {} {} {}",
-                    r,
-                    g,
-                    b
-                );
-            }
+        println!("Players: {}", lobby.players.len());
 
-            Packet::Leave => {
-    let mut lobby = lobby.lock().await;
+        println!("{name} joined");
 
-    lobby.remove_player("Unknown");
-}
+        if lobby.is_ready() {
+            println!("Game can start!");
         }
     }
+
+    Packet::Guess { r, g, b } => {
+
+        println!(
+            "Player guessed -> R:{} G:{} B:{}",
+            r,
+            g,
+            b
+        );
+
+    }
+
+    Packet::Leave => {
+
+        println!("Player left");
+
+    }
 }
+    }
+}}

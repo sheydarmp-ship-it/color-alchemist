@@ -21,10 +21,6 @@ impl Lobby {
     ) {
         self.players.push(Player { name });
 
-        println!(
-            "Players: {}",
-            self.players.len()
-        );
     }
 
     pub fn remove_player(
@@ -33,11 +29,6 @@ impl Lobby {
     ) {
         self.players.retain(
             |p| p.name != name
-        );
-
-        println!(
-            "Players: {}",
-            self.players.len()
         );
     }
 
