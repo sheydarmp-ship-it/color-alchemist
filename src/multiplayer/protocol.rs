@@ -6,10 +6,16 @@ pub enum Packet {
         name: String,
     },
 
+    Ready,
+
     Guess {
         r: u8,
         g: u8,
         b: u8,
+    },
+
+    RoundResult {
+        accuracy: f32,
     },
 
     Leave,

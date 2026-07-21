@@ -1,5 +1,6 @@
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::io::AsyncWriteExt;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -38,9 +39,11 @@ impl Server {
     mut socket: TcpStream,
     lobby: Arc<Mutex<Lobby>>,
 ) {
-        let reader = BufReader::new(socket);
+        let (reader, mut writer) = socket.into_split();
 
+let reader = BufReader::new(reader);
 let mut lines = reader.lines();
+let mut player_name = String::new();
 
 while let Some(line) = lines.next_line().await.unwrap() {
 
@@ -57,6 +60,7 @@ while let Some(line) = lines.next_line().await.unwrap() {
             lobby.lock().await;
 
         lobby.add_player(name.clone());
+        player_name = name.clone();
 
         println!("Players: {}", lobby.players.len());
 
@@ -68,21 +72,60 @@ while let Some(line) = lines.next_line().await.unwrap() {
     }
 
     Packet::Guess { r, g, b } => {
-
         println!(
-            "Player guessed -> R:{} G:{} B:{}",
-            r,
-            g,
-            b
-        );
+        "Player guessed -> R:{} G:{} B:{}",
+        r,
+        g,
+        b
+    );
 
+        let lobby = lobby.lock().await;
+
+        let accuracy =
+        lobby.accuracy(r, g, b);
+
+        println!("Accuracy = {:.2}%",accuracy);
+        let packet =
+    Packet::RoundResult {
+        accuracy,
+    };
+
+let json =
+    serde_json::to_string(&packet)
+        .unwrap();
+
+writer
+    .write_all(
+        format!("{json}\n").as_bytes()
+    )
+    .await
+    .unwrap();
     }
+
+    Packet::RoundResult { .. } => {}
 
     Packet::Leave => {
 
         println!("Player left");
 
     }
+
+    Packet::Ready => {
+
+    let mut lobby = lobby.lock().await;
+
+    lobby.set_ready(&player_name);
+
+    println!("{player_name} is READY");
+
+    if lobby.everyone_ready() {
+
+        println!("====================");
+        println!("ALL PLAYERS READY");
+        println!("GAME STARTED");
+        println!("====================");
+
+    }}
 }
     }
 }}

@@ -106,8 +106,18 @@ fn handle_game_input(game: &mut GameState) {
     update_blue(game);
 
     if is_key_pressed(KeyCode::Space) {
+
+    if game.is_online() {
+
+        println!("Online mode");
+
+    } else {
+
         game.submit_guess();
+
     }
+
+}
 }
 fn update_red(game: &mut GameState) {
     if is_key_pressed(KeyCode::Up) {

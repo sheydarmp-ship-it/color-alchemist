@@ -1,4 +1,4 @@
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 
 use crate::multiplayer::protocol::Packet;
@@ -32,4 +32,21 @@ impl Client {
     .await
     .unwrap();
     }
+    pub async fn receive(
+    &mut self,
+) -> Packet {
+
+    let mut reader =
+        BufReader::new(&mut self.stream);
+
+    let mut line =
+        String::new();
+
+    reader
+        .read_line(&mut line)
+        .await
+        .unwrap();
+
+    serde_json::from_str(&line).unwrap()
+}
 }

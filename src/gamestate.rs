@@ -1,6 +1,7 @@
 use crate::color::ColorRGB;
 use crate::player::Player;
 use serde::{Serialize, Deserialize};
+use crate::multiplayer::client::Client;
 #[derive(Clone, Copy, PartialEq)]
 pub enum RoundResult {
     Playing,
@@ -49,6 +50,10 @@ pub struct GameState {
     pub message: String,
 
     pub high_score: u32,
+
+    pub online: bool,
+
+    pub client: Option<Client>,
 }
 
 impl GameState {
@@ -68,6 +73,10 @@ impl GameState {
             message: "Match the color!".to_string(),
 
             high_score,
+
+            online: false,
+
+            client: None,
         }
     }
 
@@ -122,5 +131,14 @@ impl GameState {
         self.result = RoundResult::Playing;
 
         self.message = "Match the color!".to_string();
+    }
+
+    pub fn enable_online(&mut self,client: Client) {
+    self.online = true;
+    self.client = Some(client);
+    }
+
+    pub fn is_online(&self) -> bool {
+    self.online
     }
 }

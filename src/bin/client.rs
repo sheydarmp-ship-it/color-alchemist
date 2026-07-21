@@ -17,6 +17,9 @@ async fn main() {
         }
 
     ).await;
+    client.send(
+    Packet::Ready,
+    ).await;
 
 client.send(
     Packet::Guess {
@@ -25,4 +28,25 @@ client.send(
         b: 220,
     }
 ).await;
+let packet = client.receive().await;
+
+println!("Server replied: {:?}", packet);
+let packet =
+    client.receive().await;
+
+match packet {
+
+    Packet::RoundResult {
+        accuracy,
+    } => {
+
+        println!(
+            "Server says: {:.2}%",
+            accuracy
+        );
+
+    }
+
+    _ => {}
+}
 }
