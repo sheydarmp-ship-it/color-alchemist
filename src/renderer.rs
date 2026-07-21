@@ -40,6 +40,7 @@ impl Renderer{
     draw_text(&game.message, 270.0, 330.0,35.0,ORANGE,);
     let time = format!("Time: {:.0}", game.time_left);
     draw_text(&time, 20.0, 150.0, 30.0, RED);
+    draw_text(&game.network_message,250.0,370.0,28.0,GREEN);
 }
 
 fn draw_result_screen(&self, game: &GameState) {
@@ -80,6 +81,16 @@ fn draw_result_screen(&self, game: &GameState) {
         30.0,
         LIGHTGRAY,
     );
+    if let Some(acc) = game.online_accuracy {
+
+    draw_text(
+        &format!("Server Accuracy: {:.2}%", acc),
+        20.0,
+        40.0,
+        30.0,
+        GREEN,
+    );
+}
 }
 
 pub fn render(&self, game: &GameState) {
@@ -99,4 +110,6 @@ pub fn render(&self, game: &GameState) {
     self.draw_player_color(game);
 
     self.draw_ui(game);
-}}
+    
+}
+}

@@ -8,6 +8,7 @@ pub struct Menu {
     pub step: MenuStep,
     pub mode: GameMode,
     pub backspace_timer: f32,
+    pub host_game: bool,
 }
 #[derive(PartialEq)]
 pub enum MenuStep {
@@ -19,6 +20,7 @@ pub enum MenuStep {
     Leaderboard,
 }
 
+#[derive(PartialEq)]
 pub enum GameMode {
     Single,
     Multiplayer,
@@ -34,6 +36,7 @@ pub fn new() -> Self {
         step: MenuStep::Name,
         mode: GameMode::Single,
         backspace_timer: 0.0,
+        host_game: true,
     }
 }
 
@@ -114,7 +117,21 @@ fn update_mode(&mut self) {
 }
 
 fn update_network(&mut self) {
-    // بعداً کاملش می‌کنیم
+
+    if is_key_pressed(KeyCode::Up) ||
+       is_key_pressed(KeyCode::Down)
+    {
+        self.selected = 1 - self.selected;
+    }
+
+    if is_key_pressed(KeyCode::Enter) {
+
+        self.host_game = self.selected == 0;
+
+        self.step = MenuStep::Difficulty;
+
+        self.reset_selection();
+    }
 }
 
 fn update_difficulty(&mut self) {
@@ -228,8 +245,33 @@ fn draw_difficulty(&self) {
     draw_text("ENTER : Select",120.0,470.0,28.0,LIGHTGRAY);
 }
 fn draw_network(&self) {
-    draw_text("Network Menu",150.0,150.0,40.0,YELLOW);
-}
+    let host =
+    if self.selected == 0 { GREEN } else { WHITE };
+
+let join =
+    if self.selected == 1 { GREEN } else { WHITE };
+
+draw_text("Network",170.0,100.0,45.0,YELLOW);
+
+draw_text("Host Game",170.0,220.0,35.0,host);
+
+draw_text("Join Game",170.0,280.0,35.0,join);
+
+draw_text(
+    "UP/DOWN : Select",
+    100.0,
+    400.0,
+    28.0,
+    LIGHTGRAY,
+);
+
+draw_text(
+    "ENTER : Continue",
+    100.0,
+    440.0,
+    28.0,
+    LIGHTGRAY,
+);}
 fn draw_ready(&self) {
     draw_text("Ready to Start!",150.0,140.0,45.0,GREEN);
 
@@ -252,17 +294,15 @@ fn draw_ready(&self) {
     };
 
     let diff =
-        format!("Difficulty : {}", difficulty);
+    format!("Difficulty : {}", difficulty);
 
-    draw_text(&diff,150.0,320.0,35.0,WHITE);
-
-    draw_text(
-        "Press ENTER to Start",
-        150.0,
-        430.0,
-        35.0,
-        YELLOW,
-    );
+draw_text(
+    &diff,
+    150.0,
+    320.0,
+    35.0,
+    WHITE,
+);
 }
 fn draw_leaderboard(&self) {
     clear_background(BLACK);

@@ -5,7 +5,11 @@ pub enum Packet {
     Join {
         name: String,
     },
-
+    TargetColor {
+    r: u8,
+    g: u8,
+    b: u8,
+    },
     Ready,
 
     Guess {
@@ -16,6 +20,7 @@ pub enum Packet {
 
     RoundResult {
         accuracy: f32,
+        win: bool,
     },
 
     Leave,

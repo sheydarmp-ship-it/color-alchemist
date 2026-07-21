@@ -1,5 +1,3 @@
-use crate::multiplayer::protocol::Packet;
-
 pub struct Player {
     pub name: String,
     pub ready: bool,
@@ -37,10 +35,6 @@ impl Lobby {
         self.players.retain(
             |p| p.name != name
         );
-    }
-
-    pub fn player_count(&self) -> usize {
-        self.players.len()
     }
 
     pub fn is_ready(&self) -> bool {

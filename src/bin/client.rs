@@ -5,8 +5,7 @@ use color_alchemist::multiplayer::protocol::Packet;
 async fn main() {
 
     let mut client =
-        Client::connect("127.0.0.1:7878")
-            .await;
+        Client::connect("127.0.0.1:7878");
 
     client.send(
 
@@ -16,10 +15,10 @@ async fn main() {
 
         }
 
-    ).await;
+    );
     client.send(
     Packet::Ready,
-    ).await;
+    );
 
 client.send(
     Packet::Guess {
@@ -27,17 +26,18 @@ client.send(
         g: 80,
         b: 220,
     }
-).await;
-let packet = client.receive().await;
+);
+let packet = client.receive();
 
 println!("Server replied: {:?}", packet);
 let packet =
-    client.receive().await;
+    client.receive();
 
 match packet {
 
     Packet::RoundResult {
         accuracy,
+        win:_,
     } => {
 
         println!(

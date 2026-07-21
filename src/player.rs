@@ -13,9 +13,6 @@ impl Player {
             guess: ColorRGB::new(128, 128, 128),
         }
     }
-    pub fn set_guess(&mut self, color: ColorRGB) {
-    self.guess = color;
-}
 pub fn add_score(&mut self, points: u32) {
     self.score += points;
 }

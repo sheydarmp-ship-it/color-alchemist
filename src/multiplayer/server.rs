@@ -1,131 +1,229 @@
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::net::{TcpListener, TcpStream};
-use tokio::io::AsyncWriteExt;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::{
+    io::{BufRead, BufReader, Write},
+    net::{TcpListener, TcpStream},
+    sync::{Arc, Mutex},
+    thread,
+};
 
-use crate::multiplayer::lobby::Lobby;
-use crate::multiplayer::protocol::Packet;
+use crate::multiplayer::{
+    lobby::Lobby,
+    protocol::Packet,
+};
 
 pub struct Server;
 
 impl Server {
-    pub async fn run(addr: &str) {
-        let lobby =
-    Arc::new(
-        Mutex::new(
-            Lobby::new()
-        )
-    );
+    pub fn run(addr: &str) {
+
+        let lobby = Arc::new(
+            Mutex::new(
+                Lobby::new()
+            )
+        );
+
         let listener =
             TcpListener::bind(addr)
-                .await
-                .unwrap();
+                .expect("Cannot bind server");
 
-        println!("Server started on {}", addr);
+        println!("================================");
+        println!(" Color Alchemist Server Started ");
+        println!(" Address : {}", addr);
+        println!("================================");
 
-        loop {
-    let (socket, _) = listener.accept().await.unwrap();
+        for stream in listener.incoming() {
 
-    let lobby_clone = lobby.clone();
+            match stream {
 
-    tokio::spawn(async move {
-        Self::handle_client(socket, lobby_clone).await;
-    });
-}
-    }
+                Ok(stream) => {
 
-    async fn handle_client(
-    mut socket: TcpStream,
-    lobby: Arc<Mutex<Lobby>>,
-) {
-        let (reader, mut writer) = socket.into_split();
+                    let lobby_clone =
+                        lobby.clone();
 
-let reader = BufReader::new(reader);
-let mut lines = reader.lines();
-let mut player_name = String::new();
+                    thread::spawn(move || {
 
-while let Some(line) = lines.next_line().await.unwrap() {
+                        Self::handle_client(
+                            stream,
+                            lobby_clone,
+                        );
 
-    println!("Received: {}", line);
+                    });
 
-    let packet: Packet =
-        serde_json::from_str(&line).unwrap();
+                }
 
-    match packet {
+                Err(e) => {
 
-    Packet::Join { name } => {
+                    println!(
+                        "Connection Error : {}",
+                        e
+                    );
 
-        let mut lobby =
-            lobby.lock().await;
+                }
 
-        lobby.add_player(name.clone());
-        player_name = name.clone();
+            }
 
-        println!("Players: {}", lobby.players.len());
-
-        println!("{name} joined");
-
-        if lobby.is_ready() {
-            println!("Game can start!");
         }
+
     }
+    fn handle_client(
+        mut stream: TcpStream,
+        lobby: Arc<Mutex<Lobby>>,
+    ) {
 
-    Packet::Guess { r, g, b } => {
-        println!(
-        "Player guessed -> R:{} G:{} B:{}",
-        r,
-        g,
-        b
-    );
+        let reader =
+            BufReader::new(
+                stream.try_clone().unwrap()
+            );
 
-        let lobby = lobby.lock().await;
+        let mut player_name = String::new();
 
-        let accuracy =
-        lobby.accuracy(r, g, b);
+        for line in reader.lines() {
 
-        println!("Accuracy = {:.2}%",accuracy);
-        let packet =
-    Packet::RoundResult {
-        accuracy,
-    };
+            let line = match line {
+                Ok(v) => v,
+                Err(_) => break,
+            };
 
-let json =
-    serde_json::to_string(&packet)
-        .unwrap();
+            println!("Received : {}", line);
 
-writer
-    .write_all(
-        format!("{json}\n").as_bytes()
-    )
-    .await
+            let packet: Packet =
+                serde_json::from_str(&line)
+                    .unwrap();
+
+            match packet {
+
+                Packet::Join { name } => {
+
+                    player_name = name.clone();
+
+                    let mut lobby =
+                        lobby.lock().unwrap();
+
+                    lobby.add_player(name.clone());
+
+                    println!("{} joined.", name);
+
+                    println!("Players : {}", lobby.players.len());
+
+                    let packet = Packet::TargetColor {
+                    r: lobby.target.0,
+                    g: lobby.target.1,
+                    b: lobby.target.2,};
+
+let json = serde_json::to_string(&packet).unwrap();
+
+stream
+    .write_all(format!("{json}\n").as_bytes())
     .unwrap();
-    }
 
-    Packet::RoundResult { .. } => {}
-
-    Packet::Leave => {
-
-        println!("Player left");
-
-    }
-
-    Packet::Ready => {
-
-    let mut lobby = lobby.lock().await;
-
-    lobby.set_ready(&player_name);
-
-    println!("{player_name} is READY");
-
-    if lobby.everyone_ready() {
-
-        println!("====================");
-        println!("ALL PLAYERS READY");
-        println!("GAME STARTED");
-        println!("====================");
-
-    }}
+if lobby.is_ready() {
+    println!("Enough players. Waiting for READY...");
 }
+
+                    }
+
+                
+
+                Packet::Ready => {
+
+                    let mut lobby =
+                        lobby.lock().unwrap();
+
+                    lobby.set_ready(
+                        &player_name
+                    );
+
+                    println!(
+                        "{} is READY",
+                        player_name
+                    );
+
+                    if lobby.everyone_ready() {
+
+                        println!("==================");
+                        println!("GAME START");
+                        println!("==================");
+
+                    }
+
+                }
+                                Packet::Guess { r, g, b } => {
+                   
+                    let lobby =
+                        lobby.lock().unwrap();
+
+                    let accuracy =
+                        lobby.accuracy(r, g, b);
+
+                    println!(
+                        "{} guessed -> R:{} G:{} B:{}",
+                        player_name,
+                        r,
+                        g,
+                        b
+                    );
+
+                    println!(
+                        "Accuracy : {:.2}%",
+                        accuracy
+                    );
+
+                    let reply = Packet::RoundResult {
+                     accuracy,
+                     win: accuracy >= 90.0,
+                    };
+
+                    let json =
+                        serde_json::to_string(&reply)
+                            .unwrap();
+
+                    if let Err(e) = stream.write_all(
+                        format!("{json}\n").as_bytes(),
+                    ) {
+                        println!("Send Error: {}", e);
+                        break;
+                    }
+
+                    if accuracy >= 90.0 {
+
+                        println!(
+                            "{} reached target!",
+                            player_name
+                        );
+
+                    }
+
+                }
+
+                Packet::Leave => {
+
+                    let mut lobby =
+                        lobby.lock().unwrap();
+
+                    lobby.remove_player(
+                        &player_name
+                    );
+
+                    println!(
+                        "{} left.",
+                        player_name
+                    );
+
+                    break;
+
+                }
+
+                Packet::RoundResult { .. } => {}
+
+           
+                Packet::TargetColor { .. } => {}
+            }
+
+        }
+
+        println!(
+            "Connection Closed : {}",
+            player_name
+        );
     }
-}}
+    }
+

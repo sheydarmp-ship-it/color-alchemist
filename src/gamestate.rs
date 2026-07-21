@@ -54,6 +54,10 @@ pub struct GameState {
     pub online: bool,
 
     pub client: Option<Client>,
+
+    pub online_accuracy: Option<f32>,
+
+    pub network_message: String,
 }
 
 impl GameState {
@@ -77,6 +81,10 @@ impl GameState {
             online: false,
 
             client: None,
+
+            online_accuracy: None,
+
+            network_message: String::new(),
         }
     }
 

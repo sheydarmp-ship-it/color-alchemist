@@ -12,6 +12,13 @@ use menu::Menu;
 use renderer::Renderer;
 use save::SaveData;
 use leaderboard::Leaderboard;
+use multiplayer::client::Client;
+use menu::GameMode;
+use crate::multiplayer::protocol::Packet;
+use std::thread;
+use tokio::runtime::Runtime;
+use multiplayer::server::Server;
+ use crate::menu::MenuStep;
 #[macroquad::main("Color Alchemist")]
 async fn main() {
     let mut menu = Menu::new();
@@ -19,6 +26,7 @@ async fn main() {
     let mut save = SaveData::load();
     let renderer = Renderer::new();
     let mut show_leaderboard = false;
+    let mut server_started = false;
     loop {
         let mut back_to_menu = false;
         if is_key_pressed(KeyCode::L) {
@@ -44,9 +52,9 @@ async fn main() {
             );
         } else {
             update_menu(
-                &mut menu,
-                &mut game,
-            
+    &mut menu,
+    &mut game,
+    &mut server_started,
 );
         }
 
@@ -59,7 +67,7 @@ async fn main() {
         next_frame().await;
     }
 }
-fn update_game(
+ fn update_game(
     game: &mut GameState,
     renderer: &Renderer,
     back_to_menu: &mut bool,
@@ -73,15 +81,15 @@ fn update_game(
 
     renderer.render(game);
 }
-fn update_menu(
+  fn update_menu(
     menu: &mut Menu,
     game: &mut Option<GameState>,
-) {
+    server_started: &mut bool,
+) { 
     menu.update();
     menu.draw();
 
     if menu.is_ready() {
-
         let save = SaveData::load();
 
         let high_score = save.get_highscore(
@@ -89,14 +97,60 @@ fn update_menu(
             menu.difficulty,
         );
 
-        *game = Some(GameState::new(
-            &menu.player_name,
-            menu.difficulty,
-            high_score,
-        ));
+       let mut state = GameState::new(
+    &menu.player_name,
+    menu.difficulty,
+    high_score,
+);
+
+    if menu.mode == GameMode::Multiplayer {
+ if menu.host_game && !*server_started {
+
+        thread::spawn(|| {
+
+        let rt = Runtime::new().unwrap();
+
+        rt.block_on(async {
+
+            Server::run("127.0.0.1:7878");
+
+        });
+
+    });
+     *server_started = true;
+    }
+let mut client = Client::connect("127.0.0.1:7878");
+let name = menu.player_name.trim().to_string();
+client.send(Packet::Join {
+    name,
+});
+
+let packet = client.receive();
+
+match packet {
+
+    Packet::TargetColor { r, g, b } => {
+
+        state.target.r = r;
+        state.target.y = g;
+        state.target.b = b;
+
+    }
+
+    _ => {}
+
+}
+
+state.enable_online(client);
+*game = Some(state);
+return;
+}
+menu.step = MenuStep::Name;
+menu.player_name.clear();
+*game = Some(state);
     }
 }
-fn handle_game_input(game: &mut GameState) {
+ fn handle_game_input(game: &mut GameState) {
     if game.result != RoundResult::Playing {
         return;
     }
@@ -109,14 +163,59 @@ fn handle_game_input(game: &mut GameState) {
 
     if game.is_online() {
 
-        println!("Online mode");
+    let client = game.client.as_mut().unwrap();
+
+    client.send(
+        Packet::Guess {
+
+            r: game.player.guess.r,
+            g: game.player.guess.y,
+            b: game.player.guess.b,
+        }
+    );
+
+    let reply = client.receive();
+
+match reply {
+
+    Packet::RoundResult { accuracy, win } => {
+
+    game.online_accuracy = Some(accuracy);
+
+    game.network_message =
+        format!("Accuracy = {:.2}%", accuracy);
+
+    if win {
+
+        game.player.add_score(
+            game.difficulty.score()
+        );
+
+        game.result = RoundResult::Win;
+
+        game.message =
+            "Level Complete!".to_string();
 
     } else {
 
-        game.submit_guess();
+        game.result = RoundResult::Fail;
+
+        game.message =
+            format!("Try Again! ({:.2}%)", accuracy);
 
     }
 
+}
+
+    _ => {}
+
+}
+
+} else {
+
+    game.submit_guess();
+
+}
 }
 }
 fn update_red(game: &mut GameState) {

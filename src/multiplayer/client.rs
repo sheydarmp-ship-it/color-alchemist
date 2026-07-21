@@ -1,5 +1,5 @@
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpStream;
+use std::io::{BufRead, BufReader, Write};
+use std::net::TcpStream;
 
 use crate::multiplayer::protocol::Packet;
 
@@ -8,45 +8,56 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn connect(addr: &str) -> Self {
-        let stream = TcpStream::connect(addr)
-            .await
-            .expect("Cannot connect to server");
+
+    pub fn connect(addr: &str) -> Self {
+
+        let stream =
+            TcpStream::connect(addr)
+                .expect("Cannot connect to server");
 
         println!("Connected to server.");
 
-        Self { stream }
-    }
+        Self {
+            stream,
+        }
 
-    pub async fn send(
+    }
+    pub fn send(
         &mut self,
         packet: Packet,
     ) {
+
         let json =
-    serde_json::to_string(&packet).unwrap();
+            serde_json::to_string(&packet)
+                .unwrap();
 
-    let message = format!("{json}\n");
+        let message =
+            format!("{json}\n");
 
-    self.stream
-    .write_all(message.as_bytes())
-    .await
-    .unwrap();
+        self.stream
+            .write_all(
+                message.as_bytes()
+            )
+            .unwrap();
+
     }
-    pub async fn receive(
-    &mut self,
-) -> Packet {
+    pub fn receive(&mut self) -> Packet {
 
-    let mut reader =
-        BufReader::new(&mut self.stream);
+        let mut reader =
+            BufReader::new(
+                self.stream.try_clone().unwrap()
+            );
 
-    let mut line =
-        String::new();
+        let mut line =
+            String::new();
 
-    reader
-        .read_line(&mut line)
-        .await
-        .unwrap();
+        reader
+            .read_line(&mut line)
+            .unwrap();
 
-    serde_json::from_str(&line).unwrap()
-}
+        serde_json::from_str(&line)
+            .unwrap()
+
+    }
+
 }
