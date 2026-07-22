@@ -1,6 +1,6 @@
+use crate::gamestate::Difficulty;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use crate::gamestate::Difficulty;
 const SAVE_FILE: &str = "save.json";
 
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -30,83 +30,65 @@ impl SaveData {
         }
     }
 
-    pub fn find_player(
-    &self,
-    name: &str,
-) -> Option<&PlayerSave> {
-    self.players.iter().find(|p| p.name == name)
-}
-
-pub fn find_player_mut(
-    &mut self,
-    name: &str,
-) -> Option<&mut PlayerSave> {
-    self.players.iter_mut().find(|p| p.name == name)
-}
-
-pub fn create_player(
-    &mut self,
-    name: &str,
-) {
-    self.players.push(PlayerSave {
-        name: name.to_string(),
-        easy: 0,
-        medium: 0,
-        hard: 0,
-    });
-}
-
-pub fn update_highscore(
-    &mut self,
-    name: &str,
-    difficulty: Difficulty,
-    score: u32,
-) {
-    if self.find_player(name).is_none() {
-        self.create_player(name);
+    pub fn find_player(&self, name: &str) -> Option<&PlayerSave> {
+        self.players.iter().find(|p| p.name == name)
     }
 
-    let player = self.find_player_mut(name).unwrap();
-
-    match difficulty {
-        Difficulty::Easy => {
-            if score > player.easy {
-                player.easy = score;
-            }
-        }
-
-        Difficulty::Medium => {
-            if score > player.medium {
-                player.medium = score;
-            }
-        }
-
-        Difficulty::Hard => {
-            if score > player.hard {
-                player.hard = score;
-            }
-        }
+    pub fn find_player_mut(&mut self, name: &str) -> Option<&mut PlayerSave> {
+        self.players.iter_mut().find(|p| p.name == name)
     }
 
-    self.save();
-}
+    pub fn create_player(&mut self, name: &str) {
+        self.players.push(PlayerSave {
+            name: name.to_string(),
+            easy: 0,
+            medium: 0,
+            hard: 0,
+        });
+    }
 
-pub fn get_highscore(
-    &self,
-    name: &str,
-    difficulty: Difficulty,
-) -> u32 {
-    if let Some(player) = self.find_player(name) {
+    pub fn update_highscore(&mut self, name: &str, difficulty: Difficulty, score: u32) {
+        if self.find_player(name).is_none() {
+            self.create_player(name);
+        }
+
+        let player = self.find_player_mut(name).unwrap();
+
         match difficulty {
-            Difficulty::Easy => player.easy,
-            Difficulty::Medium => player.medium,
-            Difficulty::Hard => player.hard,
+            Difficulty::Easy => {
+                if score > player.easy {
+                    player.easy = score;
+                }
+            }
+
+            Difficulty::Medium => {
+                if score > player.medium {
+                    player.medium = score;
+                }
+            }
+
+            Difficulty::Hard => {
+                if score > player.hard {
+                    player.hard = score;
+                }
+            }
         }
-    } else {
-        0
+
+        self.save();
     }
-}
-pub fn get_players(&self) -> Vec<PlayerSave> {
-    self.players.clone()
-}
+
+    pub fn get_highscore(&self, name: &str, difficulty: Difficulty) -> u32 {
+        if let Some(player) = self.find_player(name) {
+            match difficulty {
+                Difficulty::Easy => player.easy,
+                Difficulty::Medium => player.medium,
+                Difficulty::Hard => player.hard,
+            }
+        } else {
+            0
+        }
+    }
+    pub fn get_players(&self) -> Vec<PlayerSave> {
+        self.players.clone()
+    }
 }

@@ -1,24 +1,23 @@
-mod multiplayer;
 mod color;
 mod gamestate;
+mod leaderboard;
 mod menu;
+mod multiplayer;
 mod player;
 mod renderer;
 mod save;
-mod leaderboard;
+use crate::menu::MenuStep;
+use crate::multiplayer::protocol::Packet;
 use gamestate::{GameState, RoundResult};
+use leaderboard::Leaderboard;
 use macroquad::prelude::*;
+use menu::GameMode;
 use menu::Menu;
+use multiplayer::client::Client;
+use multiplayer::server::Server;
 use renderer::Renderer;
 use save::SaveData;
-use leaderboard::Leaderboard;
-use multiplayer::client::Client;
-use menu::GameMode;
-use crate::multiplayer::protocol::Packet;
 use std::thread;
-use tokio::runtime::Runtime;
-use multiplayer::server::Server;
- use crate::menu::MenuStep;
 #[macroquad::main("Color Alchemist")]
 async fn main() {
     let mut menu = Menu::new();
@@ -29,45 +28,36 @@ async fn main() {
     let mut server_started = false;
     loop {
         let mut back_to_menu = false;
-        if is_key_pressed(KeyCode::L) {
-        show_leaderboard = !show_leaderboard;
-    }
+        if is_key_pressed(KeyCode::Tab) {
+            show_leaderboard = !show_leaderboard;
+        }
 
         if show_leaderboard {
-        Leaderboard::draw(&save.get_players());
+            Leaderboard::draw(&save.get_players());
 
-    if is_key_pressed(KeyCode::Escape) {
-        show_leaderboard = false;
-    }
+            if is_key_pressed(KeyCode::Escape) {
+                show_leaderboard = false;
+            }
 
-    next_frame().await;
-    continue;
-}
+            next_frame().await;
+            continue;
+        }
         if let Some(current_game) = game.as_mut() {
-            update_game(
-                current_game,
-                &renderer,
-                &mut back_to_menu,
-                &mut save,
-            );
+            update_game(current_game, &renderer, &mut back_to_menu, &mut save);
         } else {
-            update_menu(
-    &mut menu,
-    &mut game,
-    &mut server_started,
-);
+            update_menu(&mut menu, &mut game, &mut server_started);
         }
 
         if back_to_menu {
             menu.back_to_difficulty();
             game = None;
-             while get_char_pressed().is_some() {}
+            while get_char_pressed().is_some() {}
         }
 
         next_frame().await;
     }
 }
- fn update_game(
+fn update_game(
     game: &mut GameState,
     renderer: &Renderer,
     back_to_menu: &mut bool,
@@ -77,80 +67,84 @@ async fn main() {
 
     game.update(get_frame_time());
 
-    handle_result(game, back_to_menu,save);
+    handle_result(game, back_to_menu, save);
 
     renderer.render(game);
 }
-  fn update_menu(
-    menu: &mut Menu,
-    game: &mut Option<GameState>,
-    server_started: &mut bool,
-) { 
+fn update_menu(menu: &mut Menu, game: &mut Option<GameState>, server_started: &mut bool) {
     menu.update();
     menu.draw();
 
     if menu.is_ready() {
         let save = SaveData::load();
 
-        let high_score = save.get_highscore(
-            &menu.player_name,
-            menu.difficulty,
-        );
+        let high_score = save.get_highscore(&menu.player_name, menu.difficulty);
 
-       let mut state = GameState::new(
-    &menu.player_name,
-    menu.difficulty,
-    high_score,
-);
+        let mut state = GameState::new(&menu.player_name, menu.difficulty, high_score);
 
-    if menu.mode == GameMode::Multiplayer {
- if menu.host_game && !*server_started {
+        if menu.mode == GameMode::Multiplayer {
+            if menu.host_game && !*server_started {
+                thread::spawn(|| {
+                    Server::run("127.0.0.1:7878");
+                });
 
-        thread::spawn(|| {
+                *server_started = true;
+            }
 
-        let rt = Runtime::new().unwrap();
+            let mut client = Client::connect("127.0.0.1:7878");
 
-        rt.block_on(async {
+            let name = menu.player_name.trim().to_string();
 
-            Server::run("127.0.0.1:7878");
+            client.send(Packet::Join { name });
 
-        });
+            loop {
+                match client.receive() {
+                    Packet::Waiting => {
+                        println!("Waiting for another player...");
+                    }
 
-    });
-     *server_started = true;
-    }
-let mut client = Client::connect("127.0.0.1:7878");
-let name = menu.player_name.trim().to_string();
-client.send(Packet::Join {
-    name,
-});
+                    Packet::StartGame => {
+                        println!("Game Started!");
+                    }
 
-let packet = client.receive();
+                    Packet::TargetColor { r, g, b } => {
+                        state.target.r = r;
+                        state.target.y = g;
+                        state.target.b = b;
 
-match packet {
+                        break;
+                    }
 
-    Packet::TargetColor { r, g, b } => {
+                    _ => {}
+                }
+            }
 
-        state.target.r = r;
-        state.target.y = g;
-        state.target.b = b;
+            state.enable_online(client);
 
-    }
+            *game = Some(state);
 
-    _ => {}
+            return;
+        }
 
-}
-
-state.enable_online(client);
-*game = Some(state);
-return;
-}
-menu.step = MenuStep::Name;
-menu.player_name.clear();
-*game = Some(state);
+        menu.step = MenuStep::Name;
+        menu.player_name.clear();
+        *game = Some(state);
     }
 }
- fn handle_game_input(game: &mut GameState) {
+fn handle_game_input(game: &mut GameState) {
+    if game.waiting_for_player {
+        if let Packet::StartGame = game.client.as_mut().unwrap().receive() {
+            game.waiting_for_player = false;
+
+            if let Packet::TargetColor { r, g, b } = game.client.as_mut().unwrap().receive() {
+                game.target.r = r;
+                game.target.y = g;
+                game.target.b = b;
+            }
+        }
+
+        return;
+    }
     if game.result != RoundResult::Playing {
         return;
     }
@@ -160,102 +154,71 @@ menu.player_name.clear();
     update_blue(game);
 
     if is_key_pressed(KeyCode::Space) {
+        if game.is_online() {
+            let client = game.client.as_mut().unwrap();
 
-    if game.is_online() {
+            client.send(Packet::Guess {
+                r: game.player.guess.r,
+                g: game.player.guess.y,
+                b: game.player.guess.b,
+            });
 
-    let client = game.client.as_mut().unwrap();
+            let reply = client.receive();
 
-    client.send(
-        Packet::Guess {
+            match reply {
+                Packet::RoundResult { accuracy, win } => {
+                    game.online_accuracy = Some(accuracy);
 
-            r: game.player.guess.r,
-            g: game.player.guess.y,
-            b: game.player.guess.b,
+                    game.network_message = format!("Accuracy = {:.2}%", accuracy);
+
+                    if win {
+                        game.player.add_score(game.difficulty.score());
+
+                        game.result = RoundResult::Win;
+
+                        game.message = "Level Complete!".to_string();
+                    } else {
+                        game.result = RoundResult::Fail;
+
+                        game.message = format!("Try Again! ({:.2}%)", accuracy);
+                    }
+                }
+
+                _ => {}
+            }
+        } else {
+            game.submit_guess();
         }
-    );
-
-    let reply = client.receive();
-
-match reply {
-
-    Packet::RoundResult { accuracy, win } => {
-
-    game.online_accuracy = Some(accuracy);
-
-    game.network_message =
-        format!("Accuracy = {:.2}%", accuracy);
-
-    if win {
-
-        game.player.add_score(
-            game.difficulty.score()
-        );
-
-        game.result = RoundResult::Win;
-
-        game.message =
-            "Level Complete!".to_string();
-
-    } else {
-
-        game.result = RoundResult::Fail;
-
-        game.message =
-            format!("Try Again! ({:.2}%)", accuracy);
-
     }
-
-}
-
-    _ => {}
-
-}
-
-} else {
-
-    game.submit_guess();
-
-}
-}
 }
 fn update_red(game: &mut GameState) {
     if is_key_pressed(KeyCode::Up) {
-        game.player.guess.r =
-            game.player.guess.r.saturating_add(5);
+        game.player.guess.r = game.player.guess.r.saturating_add(5);
     }
 
     if is_key_pressed(KeyCode::Down) {
-        game.player.guess.r =
-            game.player.guess.r.saturating_sub(5);
+        game.player.guess.r = game.player.guess.r.saturating_sub(5);
     }
 }
 fn update_yellow(game: &mut GameState) {
     if is_key_pressed(KeyCode::Right) {
-        game.player.guess.y =
-            game.player.guess.y.saturating_add(5);
+        game.player.guess.y = game.player.guess.y.saturating_add(5);
     }
 
     if is_key_pressed(KeyCode::Left) {
-        game.player.guess.y =
-            game.player.guess.y.saturating_sub(5);
+        game.player.guess.y = game.player.guess.y.saturating_sub(5);
     }
 }
 fn update_blue(game: &mut GameState) {
     if is_key_pressed(KeyCode::Q) {
-        game.player.guess.b =
-            game.player.guess.b.saturating_add(5);
+        game.player.guess.b = game.player.guess.b.saturating_add(5);
     }
 
     if is_key_pressed(KeyCode::A) {
-        game.player.guess.b =
-            game.player.guess.b.saturating_sub(5);
+        game.player.guess.b = game.player.guess.b.saturating_sub(5);
     }
 }
-fn handle_result(
-    game: &mut GameState,
-    back_to_menu: &mut bool,
-    save: &mut SaveData,
-) {
+fn handle_result(game: &mut GameState, back_to_menu: &mut bool, save: &mut SaveData) {
     if game.result == RoundResult::Playing {
         return;
     }
@@ -263,21 +226,13 @@ fn handle_result(
     if is_key_pressed(KeyCode::Enter) {
         match game.result {
             RoundResult::Win => {
-                save.update_highscore(
-                    &game.player.name,
-                    game.difficulty,
-                    game.player.score,
-                );
+                save.update_highscore(&game.player.name, game.difficulty, game.player.score);
 
                 game.next_level();
             }
 
             RoundResult::Fail | RoundResult::TimeUp => {
-                save.update_highscore(
-                    &game.player.name,
-                    game.difficulty,
-                    game.player.score,
-                );
+                save.update_highscore(&game.player.name, game.difficulty, game.player.score);
 
                 game.restart_round();
             }
@@ -287,11 +242,7 @@ fn handle_result(
     }
 
     if is_key_pressed(KeyCode::Escape) {
-        save.update_highscore(
-            &game.player.name,
-            game.difficulty,
-            game.player.score,
-        );
+        save.update_highscore(&game.player.name, game.difficulty, game.player.score);
 
         *back_to_menu = true;
     }

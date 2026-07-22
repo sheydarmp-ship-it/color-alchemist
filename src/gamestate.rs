@@ -1,7 +1,7 @@
 use crate::color::ColorRGB;
-use crate::player::Player;
-use serde::{Serialize, Deserialize};
 use crate::multiplayer::client::Client;
+use crate::player::Player;
+use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, PartialEq)]
 pub enum RoundResult {
     Playing,
@@ -10,7 +10,7 @@ pub enum RoundResult {
     TimeUp,
 }
 
-#[derive(Clone,Copy,Debug,PartialEq,Eq,Serialize, Deserialize,)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Difficulty {
     Easy,
     Medium,
@@ -58,10 +58,12 @@ pub struct GameState {
     pub online_accuracy: Option<f32>,
 
     pub network_message: String,
+
+    pub waiting_for_player: bool,
 }
 
 impl GameState {
-    pub fn new(player_name: &str,difficulty: Difficulty,high_score: u32,) -> Self {
+    pub fn new(player_name: &str, difficulty: Difficulty, high_score: u32) -> Self {
         Self {
             target: ColorRGB::random(),
             player: Player::new(player_name),
@@ -85,6 +87,8 @@ impl GameState {
             online_accuracy: None,
 
             network_message: String::new(),
+
+            waiting_for_player: false,
         }
     }
 
@@ -96,7 +100,7 @@ impl GameState {
         if self.similarity() >= 90.0 {
             self.player.add_score(self.difficulty.score());
             if self.player.score > self.high_score {
-            self.high_score = self.player.score;
+                self.high_score = self.player.score;
             }
             self.result = RoundResult::Win;
 
@@ -104,8 +108,7 @@ impl GameState {
         } else {
             self.result = RoundResult::Fail;
 
-            self.message =
-                format!("Try Again! ({:.1}%)", self.similarity());
+            self.message = format!("Try Again! ({:.1}%)", self.similarity());
         }
     }
 
@@ -141,12 +144,12 @@ impl GameState {
         self.message = "Match the color!".to_string();
     }
 
-    pub fn enable_online(&mut self,client: Client) {
-    self.online = true;
-    self.client = Some(client);
+    pub fn enable_online(&mut self, client: Client) {
+        self.online = true;
+        self.client = Some(client);
     }
 
     pub fn is_online(&self) -> bool {
-    self.online
+        self.online
     }
 }

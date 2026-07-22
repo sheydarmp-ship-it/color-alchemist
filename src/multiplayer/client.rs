@@ -8,56 +8,27 @@ pub struct Client {
 }
 
 impl Client {
-
     pub fn connect(addr: &str) -> Self {
-
-        let stream =
-            TcpStream::connect(addr)
-                .expect("Cannot connect to server");
+        let stream = TcpStream::connect(addr).expect("Cannot connect to server");
 
         println!("Connected to server.");
 
-        Self {
-            stream,
-        }
-
+        Self { stream }
     }
-    pub fn send(
-        &mut self,
-        packet: Packet,
-    ) {
+    pub fn send(&mut self, packet: Packet) {
+        let json = serde_json::to_string(&packet).unwrap();
 
-        let json =
-            serde_json::to_string(&packet)
-                .unwrap();
+        let message = format!("{json}\n");
 
-        let message =
-            format!("{json}\n");
-
-        self.stream
-            .write_all(
-                message.as_bytes()
-            )
-            .unwrap();
-
+        self.stream.write_all(message.as_bytes()).unwrap();
     }
     pub fn receive(&mut self) -> Packet {
+        let mut reader = BufReader::new(self.stream.try_clone().unwrap());
 
-        let mut reader =
-            BufReader::new(
-                self.stream.try_clone().unwrap()
-            );
+        let mut line = String::new();
 
-        let mut line =
-            String::new();
+        reader.read_line(&mut line).unwrap();
 
-        reader
-            .read_line(&mut line)
-            .unwrap();
-
-        serde_json::from_str(&line)
-            .unwrap()
-
+        serde_json::from_str(&line).unwrap()
     }
-
 }
