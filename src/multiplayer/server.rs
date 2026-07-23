@@ -5,7 +5,7 @@ use std::{
     thread,
 };
 
-use crate::multiplayer::{lobby::Lobby, protocol::Packet};
+use crate::multiplayer::{lobby::Lobby, protocol::Packet, lobby::RoundOutcome};
 
 pub struct Server;
 
@@ -99,33 +99,150 @@ impl Server {
                         }
                     }
                 }
-                Packet::Guess { r, g, b } => {
-                    let lobby = lobby.lock().unwrap();
+               Packet::Guess { r, g, b } => {
 
-                    let accuracy = lobby.accuracy(r, g, b);
+    let mut lobby = lobby.lock().unwrap();
 
-                    println!("{} guessed -> R:{} G:{} B:{}", player_name, r, g, b);
+    let accuracy = lobby.accuracy(r, g, b);
 
-                    println!("Accuracy : {:.2}%", accuracy);
+    println!(
+        "{} guessed -> R:{} G:{} B:{}",
+        player_name,
+        r,
+        g,
+        b
+    );
 
-                    let reply = Packet::RoundResult {
-                        accuracy,
-                        win: accuracy >= 90.0,
-                    };
+    println!("Accuracy : {:.2}%", accuracy);
 
-                    let json = serde_json::to_string(&reply).unwrap();
+    lobby.record_guess(&player_name, accuracy);
 
-                    if let Err(e) = stream.write_all(format!("{json}\n").as_bytes()) {
-                        println!("Send Error: {}", e);
-                        break;
-                    }
+    match lobby.evaluate_round() {
 
-                    if accuracy >= 90.0 {
-                        println!("{} reached target!", player_name);
-                    }
-                }
+        RoundOutcome::Waiting => {}
+
+        RoundOutcome::Repeat => {
+
+            println!("Round Repeat");
+
+            lobby.new_target();
+
+            let target = Packet::TargetColor {
+                r: lobby.target.0,
+                g: lobby.target.1,
+                b: lobby.target.2,
+            };
+
+            let target_json =
+                serde_json::to_string(&target).unwrap();
+
+            for player in &mut lobby.players {
+
+                player.submitted = false;
+                player.time_up = false;
+                player.accuracy = 0.0;
+
+                player
+                    .stream
+                    .write_all(
+                        format!("{target_json}\n").as_bytes()
+                    )
+                    .unwrap();
+            }
+
+        }
+
+        RoundOutcome::Winner(name) => {
+
+    println!("Winner : {}", name);
+
+    for player in &mut lobby.players {
+
+        let packet = Packet::RoundResult {
+            accuracy: player.accuracy,
+            win: player.name == name,
+        };
+
+        let json = serde_json::to_string(&packet).unwrap();
+
+        let _ = player
+            .stream
+            .write_all(format!("{json}\n").as_bytes());
+    }
+
+    lobby.send_new_round();
+
+}
+
+    }
+
+}
+                Packet::TimeUp => {
+
+    let mut lobby = lobby.lock().unwrap();
+
+    lobby.record_time_up(&player_name);
+
+    match lobby.evaluate_round() {
+
+        RoundOutcome::Waiting => {}
+
+       RoundOutcome::Repeat => {
+
+    println!("Round Repeat");
+
+    lobby.new_target();
+
+    let target = Packet::TargetColor {
+        r: lobby.target.0,
+        g: lobby.target.1,
+        b: lobby.target.2,
+    };
+
+    let target_json = serde_json::to_string(&target).unwrap();
+
+    for player in &mut lobby.players {
+
+        player.submitted = false;
+        player.time_up = false;
+        player.accuracy = 0.0;
+
+        player
+            .stream
+            .write_all(format!("{target_json}\n").as_bytes())
+            .unwrap();
+    }
+
+}
+
+        RoundOutcome::Winner(name) => {
+
+    println!("Winner : {}", name);
+
+    for player in &mut lobby.players {
+
+        let packet = Packet::RoundResult {
+            accuracy: player.accuracy,
+            win: player.name == name,
+        };
+
+        let json = serde_json::to_string(&packet).unwrap();
+
+        player
+            .stream
+            .write_all(format!("{json}\n").as_bytes())
+            .unwrap();
+    }
+
+}
+
+    }
+
+}
                 Packet::Waiting => {}
                 Packet::StartGame => {}
+                Packet::Winner { .. } => {}
+                Packet::RepeatRound => {}
                 Packet::Leave => {
                     let mut lobby = lobby.lock().unwrap();
 

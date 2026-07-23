@@ -1,6 +1,7 @@
 use crate::color::ColorRGB;
 use crate::multiplayer::client::Client;
 use crate::player::Player;
+use crate::Packet;
 use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, PartialEq)]
 pub enum RoundResult {
@@ -60,6 +61,8 @@ pub struct GameState {
     pub network_message: String,
 
     pub waiting_for_player: bool,
+
+    pub hint: String,
 }
 
 impl GameState {
@@ -89,6 +92,8 @@ impl GameState {
             network_message: String::new(),
 
             waiting_for_player: false,
+
+            hint: String::new(),
         }
     }
 
@@ -113,18 +118,25 @@ impl GameState {
     }
 
     pub fn update(&mut self, delta_time: f32) {
-        if self.result != RoundResult::Playing {
-            return;
-        }
-
-        self.time_left -= delta_time;
-
-        if self.time_left <= 0.0 {
-            self.time_left = 0.0;
-            self.result = RoundResult::TimeUp;
-            self.message = "Time Up!".to_string();
-        }
+    if self.result != RoundResult::Playing {
+        return;
     }
+
+    self.time_left -= delta_time;
+
+    if self.time_left <= 0.0 {
+        self.time_left = 0.0;
+
+        if self.is_online() {
+            if let Some(client) = self.client.as_mut() {
+                client.send(Packet::TimeUp);
+            }
+        }
+
+        self.result = RoundResult::TimeUp;
+        self.message = "Time Up!".to_string();
+    }
+}
 
     pub fn next_level(&mut self) {
         self.level += 1;

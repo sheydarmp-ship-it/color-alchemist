@@ -22,13 +22,17 @@ impl Client {
 
         self.stream.write_all(message.as_bytes()).unwrap();
     }
-    pub fn receive(&mut self) -> Packet {
-        let mut reader = BufReader::new(self.stream.try_clone().unwrap());
+   pub fn receive(&mut self) -> Packet {
+    let mut reader = BufReader::new(self.stream.try_clone().unwrap());
 
-        let mut line = String::new();
+    let mut line = String::new();
 
-        reader.read_line(&mut line).unwrap();
+    let size = reader.read_line(&mut line).unwrap();
 
-        serde_json::from_str(&line).unwrap()
+    if size == 0 {
+        panic!("Server closed connection");
     }
+
+    serde_json::from_str(&line).unwrap()
+}
 }

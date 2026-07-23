@@ -149,9 +149,7 @@ impl Menu {
         }
     }
 
-    fn update_ready(&mut self) {
-        // شروع بازی در main انجام می‌شود
-    }
+    fn update_ready(&mut self) {}
 
     fn handle_escape(&mut self) {
         if !is_key_pressed(KeyCode::Escape) {

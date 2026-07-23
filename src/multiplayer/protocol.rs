@@ -12,6 +12,14 @@ pub enum Packet {
 
     Guess { r: u8, g: u8, b: u8 },
 
+    TimeUp,
+
+    Winner {
+    name: String,
+    },
+
+    RepeatRound,
+
     RoundResult { accuracy: f32, win: bool },
 
     Leave,

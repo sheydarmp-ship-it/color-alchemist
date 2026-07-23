@@ -38,7 +38,8 @@ impl Renderer {
         let time = format!("Time: {:.0}", game.time_left);
         draw_text(&time, 20.0, 150.0, 30.0, RED);
         draw_text(&game.network_message, 250.0, 370.0, 28.0, GREEN);
-    }
+        draw_text("AI Assistant:H",40.0, 350.0,28.0, YELLOW,);
+        draw_text(&game.hint,40.0,370.0, 24.0, WHITE,);}
 
     fn draw_result_screen(&self, game: &GameState) {
         clear_background(BLACK);

@@ -6,6 +6,7 @@ mod multiplayer;
 mod player;
 mod renderer;
 mod save;
+mod ai_hint;
 use crate::menu::MenuStep;
 use crate::multiplayer::protocol::Packet;
 use gamestate::{GameState, RoundResult};
@@ -153,10 +154,18 @@ fn handle_game_input(game: &mut GameState) {
     update_yellow(game);
     update_blue(game);
 
+    
+    if is_key_pressed(KeyCode::H) {
+
+    game.hint = ai_hint::get_hint(
+        &game.target,
+        &game.player.guess,
+    );
+
+}
     if is_key_pressed(KeyCode::Space) {
         if game.is_online() {
-            let client = game.client.as_mut().unwrap();
-
+           let client = game.client.as_mut().unwrap();
             client.send(Packet::Guess {
                 r: game.player.guess.r,
                 g: game.player.guess.y,
@@ -183,6 +192,7 @@ fn handle_game_input(game: &mut GameState) {
                         game.message = format!("Try Again! ({:.2}%)", accuracy);
                     }
                 }
+                
 
                 _ => {}
             }
