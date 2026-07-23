@@ -35,8 +35,6 @@ A simple AI assistant analyzes the difference between the player's color and the
 - Arc & Mutex
 - File I/O
 
-## Project Structure
-
 ## Controls
 
 - Up/Down: Change Red
